@@ -223,7 +223,7 @@ func (a *API) GetValidatorMEVRewards(c *gin.Context) {
 }
 
 func (a *API) getLatestBlockNumber(ctx context.Context) (int, error) {
-	url := fmt.Sprintf("%s/v2/%s", a.mevDetector.AlchemyAPIURL, a.mevDetector.AlchemyAPIKey)
+	url := fmt.Sprintf("%s/%s", a.mevDetector.AlchemyAPIURL, a.mevDetector.AlchemyAPIKey)
 	payload := `{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}`
 
 	req, err := http.NewRequestWithContext(ctx, "POST", url, strings.NewReader(payload))

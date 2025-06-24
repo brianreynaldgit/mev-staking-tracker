@@ -111,7 +111,7 @@ func NewMEVDetector(alchemyURL, alchemyKey string) *MEVDetector {
 
 // GetBlockData retrieves block data from Alchemy
 func (d *MEVDetector) GetBlockData(ctx context.Context, blockNumber int) (*Block, error) {
-	url := fmt.Sprintf("%s/v2/%s", d.AlchemyAPIURL, d.AlchemyAPIKey)
+	url := fmt.Sprintf("%s/%s", d.AlchemyAPIURL, d.AlchemyAPIKey)
 
 	payload := fmt.Sprintf(`{
 		"jsonrpc":"2.0",
@@ -247,15 +247,37 @@ func (d *MEVDetector) detectComplexTransactions(block *Block) []Transaction {
 }
 
 // CalculateMEVReward estimates the MEV reward for validators
+// CalculateMEVReward estimates the MEV reward for validators
 func (d *MEVDetector) CalculateMEVReward(opportunities []MEVOpportunity) float64 {
 	var total float64
 	for _, opp := range opportunities {
 		for _, tx := range opp.Transactions {
+			// Skip if gas fields are empty
+			if tx.GasPrice == "" || tx.GasUsed == "" {
+				continue
+			}
+
+			// Safely parse gas price (hex string to big.Int)
+			gasPriceStr := strings.TrimPrefix(tx.GasPrice, "0x")
+			if gasPriceStr == "" {
+				gasPriceStr = "0"
+			}
+
 			gasPrice := new(big.Int)
-			gasPrice.SetString(tx.GasPrice[2:], 16) // Remove 0x and parse as hex
+			if _, ok := gasPrice.SetString(gasPriceStr, 16); !ok {
+				continue // Skip invalid gas price
+			}
+
+			// Safely parse gas used (hex string to big.Int)
+			gasUsedStr := strings.TrimPrefix(tx.GasUsed, "0x")
+			if gasUsedStr == "" {
+				gasUsedStr = "0"
+			}
 
 			gasUsed := new(big.Int)
-			gasUsed.SetString(tx.GasUsed[2:], 16)
+			if _, ok := gasUsed.SetString(gasUsedStr, 16); !ok {
+				continue // Skip invalid gas used
+			}
 
 			// Calculate tx fee: gasPrice * gasUsed
 			fee := new(big.Int).Mul(gasPrice, gasUsed)
